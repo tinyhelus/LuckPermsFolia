@@ -36,20 +36,37 @@ subprojects {
         from '../LICENSE.txt'
     }
 
-    def determinePatchVersion = {
-        // get the name of the last tag
-        def tagInfo = new ByteArrayOutputStream()
+def determinePatchVersion = {
+    // get the name of the last tag
+    def tagInfo = new ByteArrayOutputStream()
+    def gitExitValue = 0 // Initialize exit value
+
+    try {
         exec {
             commandLine 'git', 'describe', '--tags'
             standardOutput = tagInfo
+            ignoreExitValue = true // <--- ADD THIS LINE
+            doLast {
+                gitExitValue = it.exitValue
+            }
         }
-        tagInfo = tagInfo.toString()
-
-        if (!tagInfo.contains('-')) {
-            return 0
-        }
-        return tagInfo.split("-")[1]
+    } catch (Exception e) {
+        // If 'git' command itself is not found, we return 0.
+        return 0 
     }
+
+    // If git failed (exit value 128) because there were no tags, return 0.
+    if (gitExitValue != 0 || tagInfo.toString().trim().isEmpty()) {
+        return 0
+    }
+
+    def tagString = tagInfo.toString().trim()
+
+    if (!tagString.contains('-')) {
+        return 0
+    }
+    return tagString.split("-")[1].toInteger()
+}
 
     project.ext.majorVersion = '5'
     project.ext.minorVersion = '5'
